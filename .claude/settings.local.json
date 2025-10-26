@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move files old_prototype )",
+      "Bash(move bot old_prototype )",
+      "Bash(move client old_prototype )",
+      "Bash(move config.example.json old_prototype )",
+      "Bash(move setup_bot.bat old_prototype )",
+      "Bash(move:*)",
+      "Bash(move SETUP_GUIDE.md old_prototype )",
+      "Bash(move README.md old_prototype)",
+      "Bash(cmd /c \"move files old_prototype & move bot old_prototype & move client old_prototype\")",
+      "Bash(cmd /c \"if exist bot move bot old_prototype\")",
+      "Bash(dir /B)",
+      "Bash(powershell -Command:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

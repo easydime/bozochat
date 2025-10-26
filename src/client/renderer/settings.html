@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BozoChat Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 510px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 35px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #23272a;
+      margin-bottom: 8px;
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: #5865f2;
+      margin-bottom: 30px;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #23272a;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e3e5e8;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #5865f2;
+      box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.1);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      background: #f6f7f9;
+      border-radius: 8px;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #5865f2;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .help-text {
+      font-size: 13px;
+      color: #747f8d;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    button {
+      flex: 1;
+      padding: 13px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: #5865f2;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #4752c4;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #f6f7f9;
+      color: #23272a;
+    }
+
+    .btn-secondary:hover {
+      background: #e3e5e8;
+    }
+
+    .status {
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .status.success {
+      background: #d4f8e8;
+      color: #23a55a;
+      border: 2px solid #23a55a;
+    }
+
+    .status.error {
+      background: #fdedef;
+      color: #da373c;
+      border: 2px solid #da373c;
+    }
+
+    .status.hidden {
+      display: none;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e3e5e8;
+      margin: 28px 0;
+    }
+
+    .info-box {
+      background: #eff1ff;
+      border-left: 4px solid #5865f2;
+      padding: 16px;
+      border-radius: 6px;
+      margin-top: 24px;
+    }
+
+    .info-box p {
+      color: #23272a;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .info-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-box strong {
+      color: #5865f2;
+    }
+
+    code {
+      background: rgba(88, 101, 242, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      color: #5865f2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚙️ BozoChat Settings</h1>
+    <p class="subtitle">Configure your client</p>
+
+    <div id="status" class="status hidden"></div>
+
+    <form id="settings-form">
+      <div class="form-group">
+        <label for="serverUrl">Server WebSocket URL</label>
+        <input
+          type="text"
+          id="serverUrl"
+          placeholder="ws://localhost:3001"
+          required
+        >
+        <div class="help-text">The address of the server hosting the Discord bot</div>
+      </div>
+
+      <div class="form-group">
+        <label for="userId">User ID (Optional)</label>
+        <input
+          type="text"
+          id="userId"
+          placeholder="YourUsername"
+        >
+        <div class="help-text">A unique identifier to identify yourself on the server</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-group">
+        <label for="overlayPosition">Overlay Position</label>
+        <select id="overlayPosition">
+          <option value="top-left">Top Left</option>
+          <option value="top-right">Top Right</option>
+          <option value="bottom-left">Bottom Left</option>
+          <option value="bottom-right">Bottom Right</option>
+          <option value="center">Center</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="defaultDuration">Default Duration (ms)</label>
+        <input
+          type="number"
+          id="defaultDuration"
+          min="1000"
+          max="30000"
+          step="500"
+          value="5000"
+        >
+        <div class="help-text">Display time for images and text (1000ms = 1 second)</div>
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoStart">
+          <label for="autoStart">Start with Windows</label>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="button" class="btn-secondary" onclick="window.close()">
+          Cancel
+        </button>
+        <button type="submit" class="btn-primary">
+          💾 Save
+        </button>
+      </div>
+    </form>
+
+    <div class="info-box">
+      <p><strong>📌 How to get the server URL?</strong></p>
+      <p>The Discord server administrator must provide you with the WebSocket URL. It typically looks like: <code>ws://server-address:3001</code></p>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const form = document.getElementById('settings-form');
+    const statusDiv = document.getElementById('status');
+
+    // Load current configuration
+    loadConfig();
+
+    async function loadConfig() {
+      try {
+        const config = await ipcRenderer.invoke('get-config');
+
+        document.getElementById('serverUrl').value = config.serverUrl || '';
+        document.getElementById('userId').value = config.userId || '';
+        document.getElementById('overlayPosition').value = config.overlayPosition || 'center';
+        document.getElementById('defaultDuration').value = config.defaultDuration || 5000;
+        document.getElementById('autoStart').checked = config.autoStart || false;
+      } catch (error) {
+        showStatus('Error loading configuration', 'error');
+      }
+    }
+
+    // Save configuration
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const config = {
+        serverUrl: document.getElementById('serverUrl').value.trim(),
+        userId: document.getElementById('userId').value.trim(),
+        overlayPosition: document.getElementById('overlayPosition').value,
+        defaultDuration: parseInt(document.getElementById('defaultDuration').value),
+        autoStart: document.getElementById('autoStart').checked
+      };
+
+      try {
+        const result = await ipcRenderer.invoke('save-config', config);
+
+        if (result.success) {
+          showStatus('✓ Configuration saved successfully!', 'success');
+          setTimeout(() => {
+            window.close();
+          }, 1500);
+        }
+      } catch (error) {
+        showStatus('✗ Error saving configuration', 'error');
+      }
+    });
+
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+
+      setTimeout(() => {
+        statusDiv.classList.add('hidden');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

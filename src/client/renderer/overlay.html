@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BozoChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    #container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      gap: 20px;
+    }
+
+    #container.show {
+      opacity: 1;
+    }
+
+    /* Media display */
+    #media-content {
+      display: none;
+      max-width: 90vw;
+      max-height: 70vh;
+    }
+
+    #media-content img,
+    #media-content video {
+      max-width: 100%;
+      max-height: 70vh;
+      display: block;
+      object-fit: contain;
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Text display */
+    #message-content {
+      display: none;
+      color: #fff;
+      font-size: 48px;
+      font-weight: 700;
+      text-align: center;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      max-width: 80vw;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease;
+    }
+
+    #message-content.with-media {
+      font-size: 32px;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="media-content"></div>
+    <div id="message-content"></div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const container = document.getElementById('container');
+    const mediaContent = document.getElementById('media-content');
+    const messageContent = document.getElementById('message-content');
+
+    // Show notification
+    ipcRenderer.on('show-notification', (event, data) => {
+      // Reset
+      mediaContent.style.display = 'none';
+      mediaContent.innerHTML = '';
+      messageContent.style.display = 'none';
+      messageContent.textContent = '';
+      messageContent.classList.remove('with-media');
+
+      // Handle media
+      if (data.mediaType && data.mediaData) {
+        const mediaType = data.mediaType.split('/')[0]; // 'image' or 'video'
+        const mimeType = data.mediaType;
+        const base64Data = data.mediaData;
+
+        if (mediaType === 'image') {
+          showImage(base64Data, mimeType);
+        } else if (mediaType === 'video') {
+          showVideo(base64Data, mimeType);
+        }
+      }
+
+      // Handle message
+      if (data.message && data.message.trim()) {
+        messageContent.textContent = data.message;
+        messageContent.style.display = 'block';
+
+        // Smaller text if also showing media
+        if (data.mediaType && data.mediaData) {
+          messageContent.classList.add('with-media');
+        }
+      }
+
+      // Show overlay
+      container.classList.add('show');
+    });
+
+    function showImage(base64Data, mimeType) {
+      mediaContent.style.display = 'block';
+      const img = document.createElement('img');
+      img.src = `data:${mimeType};base64,${base64Data}`;
+      img.alt = 'Image';
+      mediaContent.appendChild(img);
+    }
+
+    function showVideo(base64Data, mimeType) {
+      mediaContent.style.display = 'block';
+      const video = document.createElement('video');
+      video.src = `data:${mimeType};base64,${base64Data}`;
+      video.autoplay = true;
+      video.controls = false;
+      video.loop = false;
+
+      video.onended = () => {
+        hideOverlay();
+      };
+
+      mediaContent.appendChild(video);
+    }
+
+    function hideOverlay() {
+      container.classList.remove('show');
+      setTimeout(() => {
+        ipcRenderer.send('hide-overlay');
+      }, 300);
+    }
+
+    // ESC key to dismiss
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideOverlay();
+      }
+    });
+
+    // Click anywhere to dismiss
+    container.addEventListener('click', () => {
+      hideOverlay();
+    });
+  </script>
+</body>
+</html>
