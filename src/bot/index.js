@@ -281,10 +281,10 @@ async function handleSendCommand(interaction) {
 
     // Build response fields
     const fields = [];
-    if (message) {
+    if (message && message.trim()) {
       fields.push({ name: 'Message', value: message, inline: false });
     }
-    if (attachment) {
+    if (attachment && attachment.filename) {
       fields.push({ name: 'Media', value: attachment.filename, inline: true });
     }
     fields.push({ name: 'Recipients', value: `${sent} client(s)`, inline: true });

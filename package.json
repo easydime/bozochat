@@ -28,7 +28,7 @@
     "productName": "BozoChat",
     "win": {
       "target": "nsis",
-      "icon": "src/client/test.jpg"
+      "icon": "bozoicon.ico"
     },
     "nsis": {
       "oneClick": false,

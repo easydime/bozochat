@@ -3,6 +3,9 @@ const path = require('path');
 const WebSocket = require('ws');
 const Store = require('electron-store');
 
+// Fix GPU crashes by disabling hardware acceleration
+app.disableHardwareAcceleration();
+
 const store = new Store();
 let tray = null;
 let overlayWindow = null;
@@ -110,7 +113,7 @@ function createSettingsWindow() {
       nodeIntegration: true,
       contextIsolation: false
     },
-    icon: path.join(__dirname, 'test.jpg')
+    icon: path.join(__dirname, '../../bozoicon.ico')
   });
 
   settingsWindow.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
@@ -212,7 +215,7 @@ function displayNotification(data) {
 // Create system tray icon
 function createTray() {
   // Create a simple icon (you'll want to replace this with an actual icon file)
-  const icon = nativeImage.createFromPath(path.join(__dirname, 'test.jpg'));
+  const icon = nativeImage.createFromPath(path.join(__dirname, '../../bozoicon.ico'));
 
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
 
