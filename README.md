@@ -2,15 +2,6 @@
 
 Send images and videos to your friends' screens via Discord!
 
-## Features
-
-- 🎯 **Discord Integration** - Use slash commands to send media
-- 📱 **System Tray App** - Runs quietly in the background
-- 🖼️ **Beautiful Overlays** - Sleek, modern notifications
-- 🎬 **Media Support** - Images, GIFs, and videos
-- ⚙️ **Customizable** - Position, duration, and more
-- 📦 **Easy Distribution** - Build as Windows .exe for friends
-
 ## Architecture
 
 ```
@@ -230,4 +221,3 @@ MIT - Do whatever you want with it!
 
 ---
 
-**Have fun sending memes to your friends!** 🚀
