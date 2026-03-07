@@ -14,7 +14,6 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
       padding: 20px;
-      min-height: 100vh;
     }
 
     .container {
@@ -281,7 +280,7 @@
       </div>
 
       <div class="button-group">
-        <button type="button" class="btn-secondary" onclick="window.close()">
+        <button type="button" class="btn-secondary">
           Cancel
         </button>
         <button type="submit" class="btn-primary">
@@ -297,52 +296,47 @@
   </div>
 
   <script>
-    const { ipcRenderer } = require('electron');
-
     const form = document.getElementById('settings-form');
     const statusDiv = document.getElementById('status');
 
-    // Load current configuration
-    loadConfig();
-
-    async function loadConfig() {
-      try {
-        const config = await ipcRenderer.invoke('get-config');
-
-        document.getElementById('serverUrl').value = config.serverUrl || '';
-        document.getElementById('userId').value = config.userId || '';
-        document.getElementById('overlayPosition').value = config.overlayPosition || 'center';
-        document.getElementById('defaultDuration').value = config.defaultDuration || 5000;
-        document.getElementById('autoStart').checked = config.autoStart || false;
-      } catch (error) {
-        showStatus('Error loading configuration', 'error');
-      }
+    // ── Called by Rust: evaluate_script("loadConfig({...})") ─────────────────
+    function loadConfig(config) {
+      document.getElementById('serverUrl').value = config.server_url || '';
+      document.getElementById('userId').value = config.user_id || '';
+      document.getElementById('overlayPosition').value = config.overlay_position || 'center';
+      document.getElementById('defaultDuration').value = config.default_duration || 5000;
+      document.getElementById('autoStart').checked = config.auto_start || false;
     }
 
+    // ── Called by Rust after successful save ──────────────────────────────────
+    function onSaveSuccess() {
+      showStatus('Configuration saved successfully!', 'success');
+      setTimeout(() => {
+        window.ipc.postMessage('close');
+      }, 1500);
+    }
+
+    // Signal Rust that the page is ready to receive config
+    window.ipc.postMessage('ready');
+
     // Save configuration
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
 
       const config = {
-        serverUrl: document.getElementById('serverUrl').value.trim(),
-        userId: document.getElementById('userId').value.trim(),
-        overlayPosition: document.getElementById('overlayPosition').value,
-        defaultDuration: parseInt(document.getElementById('defaultDuration').value),
-        autoStart: document.getElementById('autoStart').checked
+        server_url: document.getElementById('serverUrl').value.trim(),
+        user_id: document.getElementById('userId').value.trim(),
+        overlay_position: document.getElementById('overlayPosition').value,
+        default_duration: parseInt(document.getElementById('defaultDuration').value),
+        auto_start: document.getElementById('autoStart').checked
       };
 
-      try {
-        const result = await ipcRenderer.invoke('save-config', config);
+      window.ipc.postMessage(JSON.stringify({ action: 'save', config }));
+    });
 
-        if (result.success) {
-          showStatus('✓ Configuration saved successfully!', 'success');
-          setTimeout(() => {
-            window.close();
-          }, 1500);
-        }
-      } catch (error) {
-        showStatus('✗ Error saving configuration', 'error');
-      }
+    // Cancel button
+    document.querySelector('.btn-secondary').addEventListener('click', () => {
+      window.ipc.postMessage('close');
     });
 
     function showStatus(message, type) {

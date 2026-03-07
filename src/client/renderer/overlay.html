@@ -37,14 +37,16 @@
     /* Media display */
     #media-content {
       display: none;
-      max-width: 90vw;
-      max-height: 70vh;
+      max-width: 95vw;
+      max-height: 80vh;
+      flex-shrink: 1;
+      min-height: 0;
     }
 
     #media-content img,
     #media-content video {
       max-width: 100%;
-      max-height: 70vh;
+      max-height: 80vh;
       display: block;
       object-fit: contain;
       animation: fadeIn 0.3s ease;
@@ -58,14 +60,17 @@
       font-weight: 700;
       text-align: center;
       text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
-      padding: 20px;
-      max-width: 80vw;
+      padding: 10px 20px;
+      max-width: 90vw;
       word-wrap: break-word;
+      flex-shrink: 0;
       animation: fadeIn 0.3s ease;
     }
 
     #message-content.with-media {
-      font-size: 32px;
+      font-size: 28px;
+      max-height: 15vh;
+      overflow: hidden;
     }
 
     @keyframes fadeIn {
@@ -87,14 +92,12 @@
   </div>
 
   <script>
-    const { ipcRenderer } = require('electron');
-
     const container = document.getElementById('container');
     const mediaContent = document.getElementById('media-content');
     const messageContent = document.getElementById('message-content');
 
-    // Show notification
-    ipcRenderer.on('show-notification', (event, data) => {
+    // Called by Rust: webview.evaluate_script("showNotification({...})")
+    function showNotification(data) {
       // Reset
       mediaContent.style.display = 'none';
       mediaContent.innerHTML = '';
@@ -128,9 +131,18 @@
 
       // Show overlay
       container.classList.add('show');
-    });
+    }
+
+    // Whitelist of allowed MIME types for security
+    const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const VALID_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
     function showImage(base64Data, mimeType) {
+      // Validate MIME type
+      if (!VALID_IMAGE_TYPES.includes(mimeType)) {
+        console.error('Invalid image MIME type:', mimeType);
+        return;
+      }
       mediaContent.style.display = 'block';
       const img = document.createElement('img');
       img.src = `data:${mimeType};base64,${base64Data}`;
@@ -139,12 +151,44 @@
     }
 
     function showVideo(base64Data, mimeType) {
+      // Validate MIME type
+      if (!VALID_VIDEO_TYPES.includes(mimeType)) {
+        console.error('Invalid video MIME type:', mimeType);
+        return;
+      }
       mediaContent.style.display = 'block';
       const video = document.createElement('video');
-      video.src = `data:${mimeType};base64,${base64Data}`;
       video.autoplay = true;
       video.controls = false;
       video.loop = false;
+
+      // MOV (video/quicktime) n'est pas supporté par WebView2 comme type MIME,
+      // mais le flux H.264 est souvent lisible — on essaie video/mp4 en fallback.
+      const tryTypes = mimeType === 'video/quicktime'
+        ? ['video/mp4', '']
+        : [mimeType];
+
+      function tryNext(types) {
+        if (types.length === 0) {
+          console.error('Impossible de lire la vidéo avec tous les types MIME tentés');
+          return;
+        }
+        const [type, ...rest] = types;
+        video.src = type
+          ? `data:${type};base64,${base64Data}`
+          : `data:;base64,${base64Data}`;
+
+        video.onerror = () => tryNext(rest);
+      }
+      tryNext(tryTypes);
+
+      // Dès que la durée est connue, on la communique à Rust pour overrider le timer
+      video.onloadedmetadata = () => {
+        if (video.duration && isFinite(video.duration)) {
+          const durationMs = Math.ceil(video.duration * 1000) + 500; // +500ms marge
+          window.ipc.postMessage(`set-duration:${durationMs}`);
+        }
+      };
 
       video.onended = () => {
         hideOverlay();
@@ -156,7 +200,7 @@
     function hideOverlay() {
       container.classList.remove('show');
       setTimeout(() => {
-        ipcRenderer.send('hide-overlay');
+        window.ipc.postMessage('hide');
       }, 300);
     }
 

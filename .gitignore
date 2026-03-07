@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Rust
+src/client-rust/target/
+
 # Environment
 .env
 

@@ -44,8 +44,9 @@ function createOverlayWindow() {
     resizable: false,
     show: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
@@ -110,8 +111,9 @@ function createSettingsWindow() {
     height: 650,
     resizable: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, '../../bozoicon.ico')
   });
@@ -196,9 +198,12 @@ function handleServerMessage(message) {
 
 // Display notification
 function displayNotification(data) {
-  if (!overlayWindow) return;
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
 
   console.log('Displaying notification from:', data.sender);
+
+  // Check if webContents is available before sending
+  if (!overlayWindow.webContents || overlayWindow.webContents.isDestroyed()) return;
 
   overlayWindow.webContents.send('show-notification', data);
   overlayWindow.show();
@@ -206,7 +211,7 @@ function displayNotification(data) {
   // Auto-hide after duration
   const duration = data.duration || getConfig().defaultDuration;
   setTimeout(() => {
-    if (overlayWindow && overlayWindow.isVisible()) {
+    if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
       overlayWindow.hide();
     }
   }, duration);
@@ -299,6 +304,33 @@ ipcMain.handle('get-config', () => {
 });
 
 ipcMain.handle('save-config', (event, config) => {
+  // Validate config object
+  if (!config || typeof config !== 'object') {
+    throw new Error('Invalid configuration object');
+  }
+
+  // Validate serverUrl format
+  if (config.serverUrl && typeof config.serverUrl === 'string') {
+    if (!config.serverUrl.startsWith('ws://') && !config.serverUrl.startsWith('wss://')) {
+      throw new Error('Server URL must start with ws:// or wss://');
+    }
+  }
+
+  // Validate overlayPosition
+  const validPositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'];
+  if (config.overlayPosition && !validPositions.includes(config.overlayPosition)) {
+    throw new Error('Invalid overlay position');
+  }
+
+  // Validate defaultDuration
+  if (config.defaultDuration !== undefined) {
+    const duration = parseInt(config.defaultDuration);
+    if (isNaN(duration) || duration < 1000 || duration > 30000) {
+      throw new Error('Duration must be between 1000 and 30000 ms');
+    }
+    config.defaultDuration = duration;
+  }
+
   saveConfig(config);
 
   // Reconnect if server URL changed
@@ -308,7 +340,7 @@ ipcMain.handle('save-config', (event, config) => {
   connectWebSocket();
 
   // Reposition overlay if needed
-  if (overlayWindow && config.overlayPosition) {
+  if (overlayWindow && !overlayWindow.isDestroyed() && config.overlayPosition) {
     positionOverlay(config.overlayPosition);
   }
 

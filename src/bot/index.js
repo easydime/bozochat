@@ -69,6 +69,12 @@ wss.on('connection', (ws, req) => {
 function handleClientMessage(clientId, message) {
   const client = clients.get(clientId);
 
+  // Check if client exists (could have disconnected)
+  if (!client) {
+    console.error(`[WS] Client ${clientId} not found, ignoring message`);
+    return;
+  }
+
   switch (message.type) {
     case 'auth':
       client.userId = message.userId;
@@ -250,10 +256,20 @@ async function handleSendCommand(interaction) {
   // Download media if provided
   try {
     if (attachment) {
-      // Validate attachment type
-      const validTypes = ['image/', 'video/'];
-      if (!attachment.contentType || !validTypes.some(t => attachment.contentType.startsWith(t))) {
-        await interaction.editReply('❌ Please attach an image or video file!');
+      // Validate attachment type with strict whitelist
+      const ALLOWED_MIME_TYPES = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime'
+      ];
+
+      if (!attachment.contentType || !ALLOWED_MIME_TYPES.includes(attachment.contentType)) {
+        await interaction.editReply('❌ File type not supported! Allowed: JPEG, PNG, GIF, WebP, MP4, WebM');
+        return;
+      }
+
+      // Check file size before downloading
+      if (attachment.size > MAX_FILE_SIZE) {
+        await interaction.editReply(`❌ File too large! Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
         return;
       }
 
@@ -322,18 +338,38 @@ async function handleStatusCommand(interaction) {
   });
 }
 
-// Download media from URL
+// Download media from URL with timeout
+const DOWNLOAD_TIMEOUT = 30000; // 30 seconds
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
 function downloadMedia(url) {
   return new Promise((resolve, reject) => {
     const protocol = url.startsWith('https') ? https : http;
 
-    protocol.get(url, (res) => {
+    const request = protocol.get(url, (res) => {
       const chunks = [];
+      let totalSize = 0;
 
-      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('data', (chunk) => {
+        totalSize += chunk.length;
+        if (totalSize > MAX_FILE_SIZE) {
+          request.destroy();
+          reject(new Error(`File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       res.on('end', () => resolve(Buffer.concat(chunks)));
       res.on('error', reject);
-    }).on('error', reject);
+    });
+
+    request.on('error', reject);
+
+    // Timeout handling
+    request.setTimeout(DOWNLOAD_TIMEOUT, () => {
+      request.destroy();
+      reject(new Error('Download timeout'));
+    });
   });
 }
 
