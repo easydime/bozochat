@@ -40,7 +40,8 @@
       "Read(//c/Users/mehdi/.cargo/registry/src/**)",
       "Bash(grep -r \"with_bounds\\\\|Rect\\\\|bounds\\\\|with_position\\\\|with_size\" ~/.cargo/registry/src/*/wry-0.54*/src/)",
       "Bash(cmd /c \"taskkill /F /IM bozochat-client.exe 2>nul; exit 0\")",
-      "Bash(cargo build --release)"
+      "Bash(cargo build --release)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

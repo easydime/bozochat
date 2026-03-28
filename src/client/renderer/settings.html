@@ -10,247 +10,537 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --bg-primary:    #1e1f22;
+      --bg-secondary:  #2b2d31;
+      --bg-tertiary:   #313338;
+      --bg-input:      #1e1f22;
+      --bg-hover:      #35373c;
+      --bg-active:     #404249;
+      --accent:        #5865f2;
+      --accent-hover:  #4752c4;
+      --accent-dim:    rgba(88,101,242,0.15);
+      --text-primary:  #dbdee1;
+      --text-secondary:#949ba4;
+      --text-muted:    #6d6f78;
+      --border:        #3b3d43;
+      --success:       #23a55a;
+      --success-bg:    rgba(35,165,90,0.15);
+      --danger:        #da373c;
+      --danger-bg:     rgba(218,55,60,0.15);
+      --sidebar-w:     180px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 510px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 16px;
-      padding: 35px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    }
-
-    h1 {
-      color: #23272a;
-      margin-bottom: 8px;
-      font-size: 32px;
-      font-weight: 700;
-    }
-
-    .subtitle {
-      color: #5865f2;
-      margin-bottom: 30px;
-      font-size: 15px;
-      font-weight: 500;
-    }
-
-    .form-group {
-      margin-bottom: 24px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      color: #23272a;
-      font-weight: 600;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       font-size: 14px;
     }
 
-    input[type="text"],
-    input[type="number"],
-    select {
-      width: 100%;
-      padding: 12px 14px;
-      border: 2px solid #e3e5e8;
-      border-radius: 8px;
-      font-size: 15px;
-      transition: all 0.2s;
-      font-family: inherit;
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+
+    .app {
+      display: flex;
+      height: 100vh;
     }
 
-    input[type="text"]:focus,
-    input[type="number"]:focus,
-    select:focus {
-      outline: none;
-      border-color: #5865f2;
-      box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.1);
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 8px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
     }
 
-    .checkbox-group {
+    .sidebar-header {
+      padding: 4px 10px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .sidebar-header .app-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-header .app-version {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .nav-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 8px 10px 4px;
+    }
+
+    .nav-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 14px;
-      background: #f6f7f9;
-      border-radius: 8px;
-    }
-
-    input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
+      padding: 8px 10px;
+      border-radius: 4px;
       cursor: pointer;
-      accent-color: #5865f2;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.1s, color 0.1s;
+      user-select: none;
     }
 
-    .checkbox-group label {
-      margin: 0;
-      cursor: pointer;
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
     }
 
-    .help-text {
-      font-size: 13px;
-      color: #747f8d;
-      margin-top: 6px;
-      line-height: 1.4;
+    .nav-item.active {
+      background: var(--bg-active);
+      color: var(--text-primary);
     }
 
-    .button-group {
-      display: flex;
-      gap: 12px;
-      margin-top: 32px;
-    }
-
-    button {
-      flex: 1;
-      padding: 13px 24px;
-      border: none;
-      border-radius: 8px;
+    .nav-item .nav-icon {
+      width: 18px;
+      text-align: center;
       font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    /* ── Main content ───────────────────────────────────────────────────── */
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+    }
+
+    .content-header {
+      padding: 24px 28px 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .content-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .content-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding-bottom: 16px;
+    }
+
+    .content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .content-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .content-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* ── Panels ─────────────────────────────────────────────────────────── */
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    /* ── Form elements ──────────────────────────────────────────────────── */
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23949ba4' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .field input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .field .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* ── Toggle / checkbox ──────────────────────────────────────────────── */
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .toggle-row .toggle-label {
+      flex: 1;
+    }
+
+    .toggle-row .toggle-label strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .toggle-row .toggle-label span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Custom toggle switch */
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.2s;
+    }
+
+    .toggle input:checked + .toggle-track {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-track::after {
+      transform: translateX(18px);
+    }
+
+    /* ── Position picker ────────────────────────────────────────────────── */
+
+    .position-picker {
+      display: grid;
+      grid-template-areas:
+        "tl . tr"
+        ".  c  ."
+        "bl . br";
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 8px;
+      aspect-ratio: 16/9;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .pos-btn {
+      border: 2px solid var(--border);
+      background: var(--bg-primary);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .pos-btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .pos-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+
+    .pos-btn[data-pos="top-left"]     { grid-area: tl; }
+    .pos-btn[data-pos="top-right"]    { grid-area: tr; }
+    .pos-btn[data-pos="center"]       { grid-area: c;  }
+    .pos-btn[data-pos="bottom-left"]  { grid-area: bl; }
+    .pos-btn[data-pos="bottom-right"] { grid-area: br; }
+
+    .pos-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    /* ── Duration slider ────────────────────────────────────────────────── */
+
+    .duration-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .duration-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .duration-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 52px;
+      text-align: right;
+    }
+
+    /* ── Section separator ───────────────────────────────────────────────── */
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 24px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title:first-child {
+      margin-top: 0;
+    }
+
+    /* ── Status bar ──────────────────────────────────────────────────────── */
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 28px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .status-msg {
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .status-msg.success { color: var(--success); opacity: 1; }
+    .status-msg.error   { color: var(--danger);  opacity: 1; }
+
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.15s, transform 0.1s;
       font-family: inherit;
     }
 
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
     .btn-primary {
-      background: #5865f2;
+      background: var(--accent);
       color: white;
     }
 
     .btn-primary:hover {
-      background: #4752c4;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);
+      background: var(--accent-hover);
     }
 
     .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-secondary {
-      background: #f6f7f9;
-      color: #23272a;
-    }
-
-    .btn-secondary:hover {
-      background: #e3e5e8;
-    }
-
-    .status {
-      padding: 14px 16px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      font-weight: 500;
-      text-align: center;
-      animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .status.success {
-      background: #d4f8e8;
-      color: #23a55a;
-      border: 2px solid #23a55a;
-    }
-
-    .status.error {
-      background: #fdedef;
-      color: #da373c;
-      border: 2px solid #da373c;
-    }
-
-    .status.hidden {
-      display: none;
-    }
-
-    .divider {
-      height: 1px;
-      background: #e3e5e8;
-      margin: 28px 0;
-    }
-
-    .info-box {
-      background: #eff1ff;
-      border-left: 4px solid #5865f2;
-      padding: 16px;
-      border-radius: 6px;
-      margin-top: 24px;
-    }
-
-    .info-box p {
-      color: #23272a;
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-
-    .info-box p:last-child {
-      margin-bottom: 0;
-    }
-
-    .info-box strong {
-      color: #5865f2;
-    }
-
-    code {
-      background: rgba(88, 101, 242, 0.1);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Consolas', 'Monaco', monospace;
-      font-size: 12px;
-      color: #5865f2;
+      transform: scale(0.98);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚙️ BozoChat Settings</h1>
-    <p class="subtitle">Configure your client</p>
 
-    <div id="status" class="status hidden"></div>
+<div class="app">
 
-    <form id="settings-form">
-      <div class="form-group">
-        <label for="serverUrl">Server WebSocket URL</label>
-        <input
-          type="text"
-          id="serverUrl"
-          placeholder="ws://localhost:3001"
-          required
-        >
-        <div class="help-text">The address of the server hosting the Discord bot</div>
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="app-name">BozoChat</div>
+      <div class="app-version">Settings</div>
+    </div>
+
+    <div class="nav-section-label">General</div>
+    <div class="nav-item active" data-tab="connection">
+      <span class="nav-icon">🔌</span>
+      Connection
+    </div>
+
+    <div class="nav-section-label">Overlay</div>
+    <div class="nav-item" data-tab="display">
+      <span class="nav-icon">🖥️</span>
+      Display
+    </div>
+    <div class="nav-item" data-tab="behavior">
+      <span class="nav-icon">⚙️</span>
+      Behavior
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <div class="content">
+
+    <!-- Connection panel -->
+    <div id="tab-connection" class="panel active">
+      <div class="content-header">
+        <h2>Connection</h2>
+        <p>Configure your connection to the BozoChat server</p>
       </div>
+      <div class="content-body">
+        <div class="section-title">Server</div>
 
-      <div class="form-group">
-        <label for="userId">User ID (Optional)</label>
-        <input
-          type="text"
-          id="userId"
-          placeholder="YourUsername"
-        >
-        <div class="help-text">A unique identifier to identify yourself on the server</div>
+        <div class="field">
+          <label for="serverUrl">WebSocket URL</label>
+          <input type="text" id="serverUrl" placeholder="ws://localhost:3001">
+          <div class="hint">Address of the server running the Discord bot. Provided by the server admin.</div>
+        </div>
+
+        <div class="section-title">Identity</div>
+
+        <div class="field">
+          <label for="userId">User ID <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <input type="text" id="userId" placeholder="YourUsername">
+          <div class="hint">Unique identifier shown in server logs. Leave empty to stay anonymous.</div>
+        </div>
       </div>
+    </div>
 
-      <div class="divider"></div>
+    <!-- Display panel -->
+    <div id="tab-display" class="panel">
+      <div class="content-header">
+        <h2>Display</h2>
+        <p>Choose where the overlay appears on your screen</p>
+      </div>
+      <div class="content-body">
+        <div class="section-title">Monitor</div>
 
-      <div class="form-group">
-        <label for="overlayPosition">Overlay Position</label>
-        <select id="overlayPosition">
+        <div class="field">
+          <label for="monitorIndex">Target screen</label>
+          <select id="monitorIndex">
+            <option value="0">Monitor 1 (Primary)</option>
+          </select>
+          <div class="hint">The screen on which BozoChat notifications will appear.</div>
+        </div>
+
+        <div class="section-title">Position</div>
+
+        <div class="position-picker" id="positionPicker">
+          <button class="pos-btn" data-pos="top-left"     title="Top Left"></button>
+          <button class="pos-btn" data-pos="top-right"    title="Top Right"></button>
+          <button class="pos-btn" data-pos="center"       title="Center"></button>
+          <button class="pos-btn" data-pos="bottom-left"  title="Bottom Left"></button>
+          <button class="pos-btn" data-pos="bottom-right" title="Bottom Right"></button>
+        </div>
+        <div class="pos-label" id="posLabel">Center</div>
+
+        <!-- hidden select keeps data-binding simple -->
+        <select id="overlayPosition" style="display:none">
           <option value="top-left">Top Left</option>
           <option value="top-right">Top Right</option>
           <option value="bottom-left">Bottom Left</option>
@@ -258,95 +548,175 @@
           <option value="center">Center</option>
         </select>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="defaultDuration">Default Duration (ms)</label>
-        <input
-          type="number"
-          id="defaultDuration"
-          min="1000"
-          max="30000"
-          step="500"
-          value="5000"
-        >
-        <div class="help-text">Display time for images and text (1000ms = 1 second)</div>
+    <!-- Behavior panel -->
+    <div id="tab-behavior" class="panel">
+      <div class="content-header">
+        <h2>Behavior</h2>
+        <p>Control how notifications behave</p>
       </div>
+      <div class="content-body">
+        <div class="section-title">Timing</div>
 
-      <div class="form-group">
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoStart">
-          <label for="autoStart">Start with Windows</label>
+        <div class="field">
+          <label>Default display duration</label>
+          <div class="duration-row">
+            <input type="range" id="defaultDurationSlider" min="1000" max="30000" step="500" value="5000">
+            <span class="duration-value" id="durationDisplay">5.0 s</span>
+          </div>
+          <input type="number" id="defaultDuration" style="display:none" min="1000" max="30000" step="500" value="5000">
+          <div class="hint">Auto-close time for images and text notifications. Videos always play to completion.</div>
+        </div>
+
+        <div class="section-title">System</div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <strong>Start with Windows</strong>
+            <span>Launch BozoChat automatically on login</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoStart">
+            <span class="toggle-track"></span>
+          </label>
         </div>
       </div>
-
-      <div class="button-group">
-        <button type="button" class="btn-secondary">
-          Cancel
-        </button>
-        <button type="submit" class="btn-primary">
-          💾 Save
-        </button>
-      </div>
-    </form>
-
-    <div class="info-box">
-      <p><strong>📌 How to get the server URL?</strong></p>
-      <p>The Discord server administrator must provide you with the WebSocket URL. It typically looks like: <code>ws://server-address:3001</code></p>
     </div>
-  </div>
 
-  <script>
-    const form = document.getElementById('settings-form');
-    const statusDiv = document.getElementById('status');
+    <!-- Status bar (shared) -->
+    <div class="statusbar">
+      <span class="status-msg" id="statusMsg"></span>
+      <button class="btn btn-ghost" id="btnCancel">Cancel</button>
+      <button class="btn btn-primary" id="btnSave">Save</button>
+    </div>
 
-    // ── Called by Rust: evaluate_script("loadConfig({...})") ─────────────────
-    function loadConfig(config) {
-      document.getElementById('serverUrl').value = config.server_url || '';
-      document.getElementById('userId').value = config.user_id || '';
-      document.getElementById('overlayPosition').value = config.overlay_position || 'center';
-      document.getElementById('defaultDuration').value = config.default_duration || 5000;
-      document.getElementById('autoStart').checked = config.auto_start || false;
-    }
+  </div><!-- .content -->
+</div><!-- .app -->
 
-    // ── Called by Rust after successful save ──────────────────────────────────
-    function onSaveSuccess() {
-      showStatus('Configuration saved successfully!', 'success');
-      setTimeout(() => {
-        window.ipc.postMessage('close');
-      }, 1500);
-    }
-
-    // Signal Rust that the page is ready to receive config
-    window.ipc.postMessage('ready');
-
-    // Save configuration
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-
-      const config = {
-        server_url: document.getElementById('serverUrl').value.trim(),
-        user_id: document.getElementById('userId').value.trim(),
-        overlay_position: document.getElementById('overlayPosition').value,
-        default_duration: parseInt(document.getElementById('defaultDuration').value),
-        auto_start: document.getElementById('autoStart').checked
-      };
-
-      window.ipc.postMessage(JSON.stringify({ action: 'save', config }));
+<script>
+  // ── Tab navigation ────────────────────────────────────────────────────────
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tab = item.dataset.tab;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
     });
+  });
 
-    // Cancel button
-    document.querySelector('.btn-secondary').addEventListener('click', () => {
-      window.ipc.postMessage('close');
+  // ── Position picker ───────────────────────────────────────────────────────
+  const posSelect = document.getElementById('overlayPosition');
+  const posLabel  = document.getElementById('posLabel');
+  const posNames  = {
+    'top-left': 'Top Left', 'top-right': 'Top Right',
+    'center': 'Center',
+    'bottom-left': 'Bottom Left', 'bottom-right': 'Bottom Right'
+  };
+
+  function setPosition(pos) {
+    document.querySelectorAll('.pos-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.pos === pos);
     });
+    posSelect.value = pos;
+    posLabel.textContent = posNames[pos] || pos;
+  }
 
-    function showStatus(message, type) {
-      statusDiv.textContent = message;
-      statusDiv.className = `status ${type}`;
+  document.querySelectorAll('.pos-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPosition(btn.dataset.pos));
+  });
 
-      setTimeout(() => {
-        statusDiv.classList.add('hidden');
-      }, 3000);
+  // ── Duration slider ───────────────────────────────────────────────────────
+  const slider       = document.getElementById('defaultDurationSlider');
+  const durationHidden = document.getElementById('defaultDuration');
+  const durationDisplay = document.getElementById('durationDisplay');
+
+  function setDuration(ms) {
+    slider.value = ms;
+    durationHidden.value = ms;
+    durationDisplay.textContent = (ms / 1000).toFixed(1) + ' s';
+  }
+
+  slider.addEventListener('input', () => setDuration(parseInt(slider.value)));
+
+  // ── Called by Rust: loadMonitors([...], selectedIndex) ───────────────────
+  function loadMonitors(names, selectedIndex) {
+    const select = document.getElementById('monitorIndex');
+    select.innerHTML = '';
+    if (names.length === 0) {
+      select.innerHTML = '<option value="0">Monitor 1 (Primary)</option>';
+      return;
     }
-  </script>
+    names.forEach((name, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = i === 0 ? name + ' (Primary)' : name;
+      if (i === selectedIndex) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  // ── Called by Rust: loadConfig({...}) ────────────────────────────────────
+  function loadConfig(config) {
+    document.getElementById('serverUrl').value = config.server_url || '';
+    document.getElementById('userId').value    = config.user_id    || '';
+    document.getElementById('autoStart').checked = config.auto_start || false;
+    setDuration(config.default_duration || 5000);
+    setPosition(config.overlay_position || 'center');
+    if (config.monitor_index !== undefined) {
+      document.getElementById('monitorIndex').value = config.monitor_index;
+    }
+  }
+
+  // ── Called by Rust after successful save ──────────────────────────────────
+  function onSaveSuccess() {
+    showStatus('Saved!', 'success');
+    setTimeout(() => window.ipc.postMessage('close'), 1200);
+  }
+
+  // ── Status message ────────────────────────────────────────────────────────
+  let statusTimer = null;
+  function showStatus(msg, type) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { el.className = 'status-msg'; }, 3000);
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  document.getElementById('btnSave').addEventListener('click', () => {
+    const serverUrl = document.getElementById('serverUrl').value.trim();
+    if (!serverUrl) {
+      showStatus('Server URL is required.', 'error');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="connection"]').classList.add('active');
+      document.getElementById('tab-connection').classList.add('active');
+      document.getElementById('serverUrl').focus();
+      return;
+    }
+
+    const config = {
+      server_url:       serverUrl,
+      user_id:          document.getElementById('userId').value.trim(),
+      overlay_position: posSelect.value,
+      default_duration: parseInt(durationHidden.value),
+      auto_start:       document.getElementById('autoStart').checked,
+      monitor_index:    parseInt(document.getElementById('monitorIndex').value)
+    };
+
+    window.ipc.postMessage(JSON.stringify({ action: 'save', config }));
+  });
+
+  // ── Cancel ────────────────────────────────────────────────────────────────
+  document.getElementById('btnCancel').addEventListener('click', () => {
+    window.ipc.postMessage('close');
+  });
+
+  // Signal Rust that the page is ready
+  window.ipc.postMessage('ready');
+</script>
 </body>
 </html>

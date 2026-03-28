@@ -96,8 +96,15 @@
     const mediaContent = document.getElementById('media-content');
     const messageContent = document.getElementById('message-content');
 
+    // ID de la notification courante — incrémenté à chaque showNotification.
+    // hideOverlay() ne poste 'hide' que si l'ID n'a pas changé entre-temps.
+    let currentNotifId = 0;
+
     // Called by Rust: webview.evaluate_script("showNotification({...})")
     function showNotification(data) {
+      // Incrémenter l'ID — invalide les hideOverlay() en cours (ex: onended d'une vidéo précédente)
+      currentNotifId++;
+
       // Reset
       mediaContent.style.display = 'none';
       mediaContent.innerHTML = '';
@@ -198,9 +205,13 @@
     }
 
     function hideOverlay() {
+      const idAtHide = currentNotifId;
       container.classList.remove('show');
       setTimeout(() => {
-        window.ipc.postMessage('hide');
+        // N'envoyer 'hide' que si aucune nouvelle notification n'a été affichée entre-temps
+        if (currentNotifId === idAtHide) {
+          window.ipc.postMessage('hide');
+        }
       }, 300);
     }
 

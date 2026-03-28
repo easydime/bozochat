@@ -5,110 +5,95 @@ Send images and videos to your friends' screens via Discord!
 ## Architecture
 
 ```
-┌─────────────────┐         ┌─────────────────┐
-│  Discord Bot    │◄────────┤   Your Server   │
-│  + WebSocket    │         │   (Node.js)     │
-│     Server      │         └─────────────────┘
-└────────┬────────┘
-         │
-         │ WebSocket
-         │
-    ┌────▼─────┐
-    │  Client  │
-    │  Client  │  ← Windows app with system tray
-    │  Client  │     (one per friend)
-    └──────────┘
+┌─────────────────────────────────┐
+│  Discord Bot + WebSocket Server  │  Node.js — src/bot/
+└────────────────┬────────────────┘
+                 │ WebSocket (ws://)
+        ┌────────┴────────┐
+        │  BozoChat Client │  ← src/client-rust/  (Rust, Windows)
+        │  BozoChat Client │     system tray + transparent overlay
+        │  BozoChat Client │     one per friend
+        └─────────────────┘
 ```
 
 ## Quick Start
 
-### 1. Server Setup (You - Admin)
+### 1. Server Setup (Admin)
 
-1. **Create Discord Bot**
+1. **Create a Discord Bot**
    - Go to https://discord.com/developers/applications
-   - Create "New Application"
-   - Go to "Bot" tab → "Add Bot"
-   - Enable "Message Content Intent"
+   - Create a New Application → Bot tab → Add Bot
+   - Enable **Message Content Intent**
    - Copy the bot token
 
-2. **Configure Server**
+2. **Configure the server**
    ```bash
-   # Copy environment template
    copy .env.example .env
-
-   # Edit .env and add your bot token
-   # DISCORD_TOKEN=your_token_here
+   # Edit .env — set DISCORD_TOKEN=your_token_here
    ```
 
-3. **Start Server**
+3. **Start the server**
    ```bash
-   # Double-click or run:
    start-bot.bat
+   # or: npm run bot
    ```
 
-4. **Invite Bot to Discord**
-   - The server will show an invite URL in the console
-   - Open it and add the bot to your server
+4. **Invite the bot to your Discord server**
+   - The console will print an invite URL — open it and authorize the bot
 
-### 2. Client Setup (Your Friends)
+### 2. Client Setup (Friends)
 
-**Option A: Development Mode**
+**Requirements:** Windows 10/11 with [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 11)
+
+**Build the executable:**
 ```bash
-start-client-dev.bat
+cd src/client-rust
+cargo build --release
+# Output: src/client-rust/target/release/bozochat-client.exe
 ```
 
-**Option B: Build Executable**
-```bash
-# Build the .exe installer
-build-client.bat
+Share `bozochat-client.exe` with your friends — no installer needed, single file.
 
-# Share the installer from dist/ folder with friends
-# They just double-click and install!
-```
+### 3. Configure the Client
 
-### 3. Configure Client
-
-1. Right-click the BozoChat icon in system tray
-2. Click "Settings"
-3. Enter server URL (e.g., `ws://your-ip:3001`)
-4. (Optional) Set a username
-5. Click "Save"
+1. Double-click `bozochat-client.exe` — it appears in the system tray
+2. Right-click the tray icon → **Settings**
+3. Enter the server URL: `ws://your-server-ip:3001`
+4. (Optional) Set a username, overlay position, display monitor
+5. Click **Save**
 
 ## Usage
 
 ### In Discord
 
 ```
-/send [upload image] "Check this out!" 5
+/send [upload file] "Check this out!" 5
 ```
 
-Parameters:
-- **media**: Image or video file (drag & drop)
-- **message**: Text to display on screen
-- **duration**: How long to show (seconds, default 5)
+| Parameter | Description |
+|-----------|-------------|
+| `media`   | Image or video file (jpg, png, gif, webp, mp4, webm, mov) |
+| `message` | Text to display alongside the media |
+| `duration`| How long to show in seconds (default: 5) |
 
 ### What Happens
 
-1. You use `/send` in Discord
-2. Bot receives the command
-3. Bot downloads the media
-4. Bot broadcasts to all connected clients via WebSocket
-5. **BOOM!** Everyone sees your image/video with message
+1. You run `/send` in Discord
+2. Bot downloads the media and base64-encodes it
+3. Bot broadcasts via WebSocket to all connected clients
+4. Every connected client shows the overlay notification
+5. Videos play to completion automatically, then the overlay closes
 
-## Configuration
+## Client Settings
 
-### Server (.env)
-```env
-DISCORD_TOKEN=your_bot_token_here
-PORT=3001
-```
-
-### Client (Settings Window)
-- **Server URL**: WebSocket address (ws://server-ip:3001)
-- **User ID**: Optional identifier
-- **Overlay Position**: Where notifications appear
-- **Default Duration**: Auto-close time
-- **Auto Start**: Launch with Windows
+| Setting | Description |
+|---------|-------------|
+| Server URL | WebSocket address of the bot server (`ws://ip:3001`) |
+| User ID | Optional identifier shown in logs |
+| Display Monitor | Which screen to show the overlay on (multi-monitor support) |
+| Overlay Position | Top-left / Top-right / Bottom-left / Bottom-right / Center |
+| Default Duration | Auto-close time for images/text (ms) |
+| Auto Start | Launch with Windows |
 
 ## File Structure
 
@@ -116,108 +101,90 @@ PORT=3001
 bozochat/
 ├── src/
 │   ├── bot/
-│   │   └── index.js              # Discord bot + WebSocket server
-│   └── client/
-│       ├── main.js               # Electron main process (system tray)
-│       └── renderer/
-│           ├── overlay.html      # Notification overlay
-│           └── settings.html     # Settings window
-├── .env.example                  # Environment template
-├── package.json                  # Dependencies & build config
-├── start-bot.bat                 # Start server
-├── start-client-dev.bat          # Start client (dev mode)
-└── build-client.bat              # Build .exe installer
+│   │   └── index.js                  # Discord bot + WebSocket server
+│   └── client-rust/
+│       ├── Cargo.toml
+│       └── src/
+│           ├── main.rs               # Entry point, event loop
+│           ├── overlay.rs            # Overlay window + notification queue
+│           ├── settings.rs           # Settings window
+│           ├── tray.rs               # System tray icon + menu
+│           ├── config.rs             # Config (load/save ~/.bozochat/config.json)
+│           └── websocket.rs          # WebSocket client (tokio)
+│   └── client/renderer/
+│       ├── overlay.html              # Transparent overlay UI (embedded in binary)
+│       └── settings.html             # Settings UI (embedded in binary)
+├── bozoicon.ico                      # App icon (embedded in binary)
+├── .env.example                      # Server environment template
+├── package.json                      # Bot dependencies
+├── start-bot.bat                     # Start the bot server
+└── README.md
 ```
 
-## Building for Production
+## Building the Client
 
-### Requirements
-- Node.js 16+
-- npm
+**Requirements:** Rust 1.75+, Windows 10/11
 
-### Build Steps
+```bash
+cd src/client-rust
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+# Debug build (shows console)
+cargo build
 
-2. **Build Client Executable**
-   ```bash
-   npm run build:win
-   ```
+# Release build (no console, optimized)
+cargo build --release
+```
 
-3. **Share with Friends**
-   - The installer is in `dist/BozoChat Setup X.X.X.exe`
-   - Send it to your friends
-   - They install and connect to your server
+The release binary at `target/release/bozochat-client.exe` is self-contained — the HTML/CSS/JS UI is embedded at compile time.
 
-## Port Forwarding (If Hosting from Home)
+## Port Forwarding (Home Hosting)
 
 To let friends outside your network connect:
 
-1. **Forward Port 3001** on your router
-   - Login to router (usually 192.168.1.1)
-   - Find "Port Forwarding" settings
-   - Forward port 3001 to your computer's local IP
-
-2. **Find Your Public IP**
-   - Visit https://whatismyipaddress.com/
-
-3. **Share with Friends**
-   - They use `ws://your-public-ip:3001` as server URL
+1. Forward **port 3001** on your router to your PC's local IP
+2. Find your public IP at https://whatismyipaddress.com/
+3. Friends use `ws://your-public-ip:3001` as the server URL
 
 ## Troubleshooting
 
-### Server won't start
-- Check `.env` file exists with valid Discord token
-- Verify port 3001 is not in use
-- Check bot has required Discord permissions
+**Server won't start**
+- Check `.env` exists with a valid `DISCORD_TOKEN`
+- Verify port 3001 is not already in use
+- Ensure the bot has Message Content Intent enabled
 
-### Client won't connect
-- Verify server is running first
-- Check server URL format: `ws://ip:3001` (not http/https)
-- Test with localhost first: `ws://localhost:3001`
-- Check firewall isn't blocking port 3001
+**Client won't connect**
+- Confirm the server is running
+- Use format `ws://ip:3001` (not `http://`)
+- Test locally first: `ws://localhost:3001`
+- Check Windows Firewall isn't blocking port 3001
 
-### Overlay doesn't show
-- Check system tray icon is connected (green dot)
-- Try "Test Notification" from tray menu
-- Verify overlay position in settings
-- Check if overlay is behind fullscreen apps
+**Overlay doesn't appear**
+- Check the tray icon status (green = connected)
+- Try **Test Notification** from the tray right-click menu
+- If behind a fullscreen app: the overlay uses `HWND_TOPMOST` but DirectX exclusive fullscreen apps cannot be overlaid (Windows limitation)
 
-### Build fails
-- Run `npm install` first
-- Check Node.js version (16+)
-- Delete `node_modules` and reinstall
-- Check disk space for build output
+**WebView2 missing**
+- Download from https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+- On Windows 11 it is pre-installed
 
-## Security Notes
+## Security
 
-⚠️ **This is for private use with trusted friends!**
+> This is designed for private use with trusted friends.
 
-- Anyone connected can receive ANY media you send
-- The bot has full access to send to all clients
-- Consider adding authentication for public use
-- Be careful with what you send!
-
-## Advanced: Custom Icon
-
-1. Create a 256x256 PNG icon
-2. Convert to .ico using online tool
-3. Save as `build/icon.ico`
-4. Rebuild with `npm run build:win`
+- All connected clients receive every notification broadcast
+- No authentication is implemented — use on a trusted network or add a firewall rule
+- Config is stored in plain JSON at `~/.bozochat/config.json`
 
 ## Credits
 
 Built with:
-- [Electron](https://www.electronjs.org/) - Desktop app framework
-- [Discord.js](https://discord.js.org/) - Discord bot library
-- [ws](https://github.com/websockets/ws) - WebSocket library
+- [Rust](https://www.rust-lang.org/) — client runtime
+- [wry](https://github.com/tauri-apps/wry) — WebView2 wrapper
+- [winit](https://github.com/rust-windowing/winit) — window management
+- [tokio](https://tokio.rs/) — async runtime
+- [Discord.js](https://discord.js.org/) — Discord bot
+- [ws](https://github.com/websockets/ws) — WebSocket server
 
 ## License
 
-MIT - Do whatever you want with it!
-
----
-
+MIT
