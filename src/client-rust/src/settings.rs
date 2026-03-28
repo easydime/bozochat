@@ -58,7 +58,7 @@ pub fn open(
     use winit::dpi::LogicalSize;
 
     let mut attrs = Window::default_attributes()
-        .with_inner_size(LogicalSize::new(560u32, 720u32))
+        .with_inner_size(LogicalSize::new(640u32, 520u32))
         .with_resizable(false)
         .with_decorations(true)
         .with_title("BozoChat Settings");
@@ -74,6 +74,25 @@ pub fn open(
             return None;
         }
     };
+
+    // Supprimer le bouton maximize via Win32 (with_resizable(false) ne le retire pas toujours)
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetWindowLongW, SetWindowLongW, GWL_STYLE, WS_MAXIMIZEBOX,
+        };
+        if let Ok(handle) = window.window_handle() {
+            if let RawWindowHandle::Win32(h) = handle.as_raw() {
+                let hwnd = HWND(h.hwnd.get() as *mut core::ffi::c_void);
+                unsafe {
+                    let style = GetWindowLongW(hwnd, GWL_STYLE);
+                    SetWindowLongW(hwnd, GWL_STYLE, style & !(WS_MAXIMIZEBOX.0 as i32));
+                }
+            }
+        }
+    }
 
     // Centrer sur l'écran
     if let Some(monitor) = window.current_monitor() {
@@ -116,6 +135,16 @@ pub fn open(
 
     log::info!("Fenêtre settings ouverte");
     Some(SettingsWindow { window, webview })
+}
+
+/// Injecte la liste des moniteurs dans le WebView.
+/// Appelé avant inject_config sur 'ready'.
+pub fn inject_monitors(sw: &SettingsWindow, names: &[String], selected: usize) {
+    let json = serde_json::to_string(names).unwrap_or_else(|_| "[]".to_string());
+    let script = format!("loadMonitors({}, {})", json, selected);
+    if let Err(e) = sw.webview.evaluate_script(&script) {
+        log::error!("inject_monitors evaluate_script échoué : {}", e);
+    }
 }
 
 /// Injecte la config courante dans le WebView via evaluate_script.

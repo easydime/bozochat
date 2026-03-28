@@ -14,6 +14,7 @@ use winit::{
     application::ApplicationHandler,
     event::{StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoopProxy},
+    monitor::MonitorHandle,
     window::{Window, WindowId},
 };
 use wry::WebViewBuilder;
@@ -48,13 +49,15 @@ pub enum OverlayCommand {
     /// Ouvrir la fenêtre settings (double-clic tray ou menu Settings).
     OpenSettings,
     /// Le JS de la fenêtre settings a fini de charger.
+    /// Le Vec contient les noms des moniteurs dans l'ordre d'index.
     SettingsReady,
     /// Le JS envoie la config à sauvegarder (JSON brut).
     SettingsSave(String),
     /// Fermer la fenêtre settings.
     SettingsClose,
     /// La vidéo a chargé ses métadonnées — override la durée du timer auto-hide.
-    SetDuration(u64),
+    /// Le second champ est la génération de la notification qui a envoyé ce message.
+    SetDuration(u64, u64),
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +101,15 @@ pub struct OverlayApp {
     settings_window: Option<SettingsWindow>,
     /// Génération du timer auto-hide. Incrémenter pour annuler le timer précédent.
     hide_generation: Arc<AtomicU64>,
+    /// Génération de la notification courante. Incrémenter à chaque Show pour ignorer
+    /// les SetDuration tardifs provenant de notifications précédentes.
+    show_generation: Arc<AtomicU64>,
+    /// File d'attente des notifications reçues pendant qu'une autre est affichée.
+    notification_queue: std::collections::VecDeque<(NotificationPayload, u64)>,
+    /// Indique si l'overlay est actuellement visible.
+    is_showing: bool,
+    /// Liste des moniteurs disponibles (peuplée dans resumed()).
+    monitors: Vec<MonitorHandle>,
 }
 
 impl OverlayApp {
@@ -110,6 +122,10 @@ impl OverlayApp {
             tray: None,
             settings_window: None,
             hide_generation: Arc::new(AtomicU64::new(0)),
+            show_generation: Arc::new(AtomicU64::new(0)),
+            notification_queue: std::collections::VecDeque::new(),
+            is_showing: false,
+            monitors: Vec::new(),
         }
     }
 
@@ -127,36 +143,63 @@ impl OverlayApp {
         });
     }
 
-    /// Applique SetWindowPos HWND_TOPMOST (Windows uniquement).
+    /// Applique HWND_TOPMOST sur un HWND donné.
+    #[cfg(target_os = "windows")]
+    fn apply_topmost(hwnd: windows::Win32::Foundation::HWND) {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        };
+        unsafe {
+            let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+    }
+
+    /// Récupère le HWND de la fenêtre overlay.
+    #[cfg(target_os = "windows")]
+    fn overlay_hwnd(&self) -> Option<windows::Win32::Foundation::HWND> {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        use windows::Win32::Foundation::HWND;
+        self.window.as_ref().and_then(|w| {
+            w.window_handle().ok().and_then(|h| {
+                if let RawWindowHandle::Win32(h) = h.as_raw() {
+                    Some(HWND(h.hwnd.get() as *mut core::ffi::c_void))
+                } else {
+                    None
+                }
+            })
+        })
+    }
+
+    /// Force la fenêtre au premier plan (Windows uniquement).
     fn set_topmost(&self) {
         #[cfg(target_os = "windows")]
         {
-            use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-            use windows::Win32::Foundation::HWND;
-            use windows::Win32::UI::WindowsAndMessaging::{
-                SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+            use windows::Win32::UI::Input::KeyboardAndMouse::{
+                keybd_event, KEYBD_EVENT_FLAGS,
             };
-
-            if let Some(window) = &self.window {
-                if let Ok(handle) = window.window_handle() {
-                    if let RawWindowHandle::Win32(h) = handle.as_raw() {
-                        let hwnd = HWND(h.hwnd.get() as *mut core::ffi::c_void);
-                        unsafe {
-                            let _ = SetWindowPos(
-                                hwnd,
-                                Some(HWND_TOPMOST),
-                                0, 0, 0, 0,
-                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-                            );
-                        }
-                    }
+            use windows::Win32::UI::WindowsAndMessaging::{
+                BringWindowToTop, SetForegroundWindow,
+            };
+            if let Some(hwnd) = self.overlay_hwnd() {
+                unsafe {
+                    Self::apply_topmost(hwnd);
+                    // Hack standard pour contourner la restriction SetForegroundWindow de Vista+ :
+                    // simuler une touche virtuelle nulle pour obtenir les droits foreground,
+                    // puis appeler SetForegroundWindow immédiatement après.
+                    keybd_event(0, 0, KEYBD_EVENT_FLAGS(0), 0);
+                    let _ = SetForegroundWindow(hwnd);
+                    let _ = BringWindowToTop(hwnd);
                 }
             }
         }
     }
 
-    /// Envoie showNotification(json) au WebView, affiche la fenêtre et démarre le timer auto-hide.
-    fn show_notification(&mut self, payload: &NotificationPayload, duration_ms: u64) {
+    /// Affiche immédiatement une notification dans le WebView.
+    fn display_notification(&mut self, payload: &NotificationPayload, duration_ms: u64) {
+        self.show_generation.fetch_add(1, Ordering::Relaxed);
+        self.is_showing = true;
+
         let json = match serde_json::to_string(payload) {
             Ok(j) => j,
             Err(e) => {
@@ -172,14 +215,24 @@ impl OverlayApp {
             }
         }
 
-        // Positionner juste avant set_visible — window.current_monitor() est fiable ici.
+        // Positionner juste avant set_visible sur le moniteur sélectionné.
         if let Some(window) = &self.window {
-            if let Some(monitor) = window.current_monitor() {
+            // Choisir le moniteur selon config.monitor_index (fallback sur le moniteur courant).
+            let monitor = self.monitors.get(self.config.monitor_index)
+                .cloned()
+                .or_else(|| window.current_monitor());
+
+            if let Some(monitor) = monitor {
                 let s = monitor.size();
                 let scale = monitor.scale_factor();
-                let (x, y) = compute_position(&self.config.overlay_position, s.width, s.height, scale);
-                log::info!("Position overlay : x={} y={} (scale={} screen={}x{})", x, y, scale, s.width, s.height);
-                window.set_outer_position(winit::dpi::LogicalPosition::new(x, y));
+                let pos = monitor.position(); // position physique du moniteur sur le bureau virtuel
+                let (rel_x, rel_y) = compute_position(&self.config.overlay_position, s.width, s.height, scale);
+                // Convertir la position relative (logique) en position absolue physique
+                let abs_x = pos.x + (rel_x as f64 * scale) as i32;
+                let abs_y = pos.y + (rel_y as f64 * scale) as i32;
+                log::info!("Position overlay : abs=({},{}) rel=({},{}) monitor={} scale={} screen={}x{}",
+                    abs_x, abs_y, rel_x, rel_y, self.config.monitor_index, scale, s.width, s.height);
+                window.set_outer_position(winit::dpi::PhysicalPosition::new(abs_x, abs_y));
             }
             window.set_visible(true);
         }
@@ -189,12 +242,29 @@ impl OverlayApp {
         log::info!("Overlay affiché (timer {}ms)", duration_ms);
     }
 
-    /// Cache la fenêtre.
-    fn hide_window(&self) {
+    /// Reçoit une notification : l'affiche immédiatement si rien en cours, sinon la met en queue.
+    fn show_notification(&mut self, payload: NotificationPayload, duration_ms: u64) {
+        if self.is_showing {
+            log::info!("Overlay occupé — notification mise en queue ({} en attente)", self.notification_queue.len() + 1);
+            self.notification_queue.push_back((payload, duration_ms));
+        } else {
+            self.display_notification(&payload, duration_ms);
+        }
+    }
+
+    /// Cache la fenêtre et affiche la prochaine notification en queue si elle existe.
+    fn hide_window(&mut self) {
+        self.is_showing = false;
         if let Some(window) = &self.window {
             window.set_visible(false);
         }
         log::info!("Overlay caché");
+
+        // Afficher la prochaine notification en attente
+        if let Some((next_payload, next_duration)) = self.notification_queue.pop_front() {
+            log::info!("Affichage de la prochaine notification en queue");
+            self.display_notification(&next_payload, next_duration);
+        }
     }
 
 
@@ -218,6 +288,13 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         use winit::dpi::LogicalSize;
+
+        // ── Enumérer les moniteurs disponibles ────────────────────────────
+        self.monitors = event_loop.available_monitors().collect();
+        log::info!("Moniteurs détectés : {}", self.monitors.len());
+        for (i, m) in self.monitors.iter().enumerate() {
+            log::info!("  [{}] {:?} pos={:?} size={:?}", i, m.name(), m.position(), m.size());
+        }
 
         // ── Attributs de la fenêtre ────────────────────────────────────────
         let mut attrs = Window::default_attributes()
@@ -253,6 +330,7 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
 
         // ── WebView ────────────────────────────────────────────────────────
         let ipc_proxy = self.ipc_proxy.clone();
+        let show_gen_ipc = self.show_generation.clone();
 
         let webview = match WebViewBuilder::new()
             .with_bounds(wry::Rect {
@@ -268,7 +346,10 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
                     let _ = ipc_proxy.send_event(OverlayCommand::Hide);
                 } else if let Some(ms_str) = body.strip_prefix("set-duration:") {
                     if let Ok(ms) = ms_str.parse::<u64>() {
-                        let _ = ipc_proxy.send_event(OverlayCommand::SetDuration(ms));
+                        // Capture la génération courante au moment où la vidéo envoie sa durée.
+                        // Rust vérifiera que cette génération correspond encore à la notification active.
+                        let gen = show_gen_ipc.load(Ordering::Relaxed);
+                        let _ = ipc_proxy.send_event(OverlayCommand::SetDuration(ms, gen));
                     }
                 }
             })
@@ -284,6 +365,13 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
 
         self.window = Some(window);
         self.webview = Some(webview);
+
+        // Appliquer HWND_TOPMOST dès la création — le flag est permanent même quand
+        // la fenêtre est invisible, ce qui évite qu'elle perde son rang topmost.
+        #[cfg(target_os = "windows")]
+        if let Some(hwnd) = self.overlay_hwnd() {
+            Self::apply_topmost(hwnd);
+        }
 
         log::info!("Overlay initialisé (caché, prêt à recevoir des notifications)");
     }
@@ -311,7 +399,7 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: OverlayCommand) {
         match event {
             OverlayCommand::Show(payload, duration) => {
-                self.show_notification(&payload, duration);
+                self.show_notification(payload, duration);
             }
             OverlayCommand::Hide => {
                 self.hide_window();
@@ -342,6 +430,11 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
             }
             OverlayCommand::SettingsReady => {
                 if let Some(sw) = &self.settings_window {
+                    // Envoyer la liste des moniteurs d'abord, puis la config
+                    let names: Vec<String> = self.monitors.iter().enumerate().map(|(i, m)| {
+                        m.name().unwrap_or_else(|| format!("Monitor {}", i + 1))
+                    }).collect();
+                    settings::inject_monitors(sw, &names, self.config.monitor_index);
                     settings::inject_config(sw, &self.config);
                 }
             }
@@ -351,10 +444,14 @@ impl ApplicationHandler<OverlayCommand> for OverlayApp {
             OverlayCommand::SettingsClose => {
                 self.settings_window = None;
             }
-            OverlayCommand::SetDuration(ms) => {
-                // La vidéo a fourni sa vraie durée — on relance le timer avec cette valeur.
-                log::info!("Durée vidéo reçue : {}ms — relance du timer auto-hide", ms);
-                self.spawn_hide_timer(ms);
+            OverlayCommand::SetDuration(ms, gen) => {
+                // Ignorer si la notification a changé depuis que la vidéo a chargé ses métadonnées.
+                if gen == self.show_generation.load(Ordering::Relaxed) {
+                    log::info!("Durée vidéo reçue : {}ms — relance du timer auto-hide", ms);
+                    self.spawn_hide_timer(ms);
+                } else {
+                    log::debug!("SetDuration ignoré (génération périmée {} != {})", gen, self.show_generation.load(Ordering::Relaxed));
+                }
             }
         }
     }
@@ -378,7 +475,7 @@ impl OverlayApp {
             log::info!("Menu : Test Notification");
             let payload = tray::test_payload();
             let duration = payload.duration.unwrap_or(self.config.default_duration);
-            self.show_notification(&payload, duration);
+            self.show_notification(payload, duration);
         } else if id == ids.settings {
             log::info!("Menu : Settings");
             let proxy = self.ipc_proxy.clone();

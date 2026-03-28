@@ -48,6 +48,10 @@ pub struct Config {
 
     #[serde(default)]
     pub auto_start: bool,
+
+    /// Index du moniteur sur lequel afficher l'overlay (0 = moniteur principal).
+    #[serde(default)]
+    pub monitor_index: usize,
 }
 
 mod defaults {
@@ -68,6 +72,7 @@ impl Default for Config {
             overlay_position: OverlayPosition::default(),
             default_duration: defaults::default_duration(),
             auto_start: false,
+            monitor_index: 0,
         }
     }
 }
